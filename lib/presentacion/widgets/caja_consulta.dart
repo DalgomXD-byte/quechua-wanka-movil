@@ -33,7 +33,7 @@ class CajaConsulta extends StatelessWidget {
             onSubmitted: (_) => _enviar(),
             style: Theme.of(context).textTheme.bodyLarge,
             decoration: const InputDecoration(
-              hintText: 'una palabra en espanol o ingles',
+              hintText: 'una palabra en español o inglés',
             ),
           ),
         ),

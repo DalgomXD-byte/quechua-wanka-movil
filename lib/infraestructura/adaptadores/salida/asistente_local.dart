@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+
 import '../../../aplicacion/servicios/compositor_respuesta.dart';
 import '../../../aplicacion/servicios/detector_idioma.dart';
 import '../../../aplicacion/servicios/evaluador_confianza.dart';
@@ -6,6 +8,7 @@ import '../../../dominio/entidades/fragmento_respaldo.dart';
 import '../../../dominio/entidades/respuesta.dart';
 import '../../../dominio/objetos_valor/idioma.dart';
 import '../../../dominio/puertos/asistente_port.dart';
+import 'historial_sqlite.dart';
 import 'indice_portable.dart';
 import 'traductor_tabla.dart';
 
@@ -38,22 +41,40 @@ const _conPasajes = {
 /// el contenedor. Nada sale del telefono, que es lo que exigen RF-12 y RNF-06 y lo que
 /// sostiene el marco de soberania de datos del proyecto.
 class AsistenteLocal implements AsistentePort {
-  AsistenteLocal._(this._indice, this._traductor);
+  AsistenteLocal._(this._indice, this._traductor, this._historial);
 
   final IndicePortable _indice;
   final TraductorTabla _traductor;
+
+  /// Nulo cuando la base no pudo abrirse. El historial es accesorio: su ausencia degrada
+  /// la aplicacion pero no debe impedir consultar, que es lo que el usuario vino a hacer.
+  final HistorialSqlite? _historial;
 
   static const _detector = DetectorIdioma();
   static const _evaluador = EvaluadorConfianza();
   static const _compositor = CompositorRespuesta();
 
-  final List<EntradaHistorial> _historial = [];
   var _contador = 0;
 
-  static Future<AsistenteLocal> cargar() async {
+  static Future<AsistenteLocal> cargar({HistorialSqlite? historial}) async {
+    // Las mediciones de RNF-01 y RNF-02 se toman aqui, en el dispositivo real, y no en
+    // el escritorio de desarrollo: la arquitectura y la memoria son otras.
+    final reloj = Stopwatch()..start();
     final indice = await IndicePortable.cargar();
     final traductor = await TraductorTabla.cargar();
-    return AsistenteLocal._(indice, traductor);
+    if (kDebugMode) {
+      debugPrint('MEDICION arranque_ms=${reloj.elapsedMilliseconds} '
+          'fragmentos=${indice.fragmentos.length}');
+    }
+    HistorialSqlite? base = historial;
+    if (base == null) {
+      try {
+        base = await HistorialSqlite.abrir();
+      } catch (_) {
+        base = null;
+      }
+    }
+    return AsistenteLocal._(indice, traductor, base);
   }
 
   @override
@@ -65,12 +86,17 @@ class AsistenteLocal implements AsistentePort {
 
   @override
   Future<List<EntradaHistorial>> historial({int limite = 20}) async =>
-      _historial.reversed.take(limite).toList();
+      await _historial?.recientes(limite: limite) ?? const [];
 
   @override
   Future<Respuesta> consultar(String texto) async {
+    final reloj = Stopwatch()..start();
     final respuesta = _resolver(texto);
-    _historial.add(
+    if (kDebugMode) {
+      debugPrint('MEDICION consulta_ms=${reloj.elapsedMicroseconds / 1000} '
+          'abstenida=${respuesta.abstenida}');
+    }
+    await _historial?.registrar(
       EntradaHistorial(
         consulta: texto,
         respuesta: respuesta.texto,
@@ -132,9 +158,12 @@ class AsistenteLocal implements AsistentePort {
       // Sin entrada que descomponer no se redacta nada: se entrega el fragmento literal.
       // Es el caso de un fragmento de prosa que supero el umbral, donde no hay una
       // correspondencia que reordenar y cualquier parafrasis seria invencion.
+      // La frase nombra el termino que escribio el usuario, no el que se uso para
+      // buscar: quien pregunta por "love" espera leer "love" y no "amor", que es un
+      // detalle interno de como se alcanzo la entrada. Con que se busco se dice aparte.
       texto: entrada == null
           ? mejor.texto
-          : _compositor.componer(entrada, idioma, terminoBuscado),
+          : _compositor.componer(entrada, idioma, termino),
       abstenida: false,
       idioma: idioma,
       similitudMaxima: _evaluador.similitudMaxima(recuperados),

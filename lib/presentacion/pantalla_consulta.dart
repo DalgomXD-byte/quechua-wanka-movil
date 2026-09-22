@@ -118,8 +118,8 @@ class _PantallaConsultaState extends State<PantallaConsulta> {
                 if (_respuesta == null && _error == null) ...[
                   const SizedBox(height: 22),
                   Text(
-                    'Las respuestas se componen unicamente a partir de fuentes '
-                    'publicadas, y se citan con documento y pagina. Si no hay '
+                    'Las respuestas se componen únicamente a partir de fuentes '
+                    'publicadas, y se citan con documento y página. Si no hay '
                     'respaldo, el sistema lo dice en lugar de proponer una forma.',
                     style: tema.textTheme.bodyMedium,
                   ),

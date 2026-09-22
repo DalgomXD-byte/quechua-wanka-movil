@@ -57,7 +57,7 @@ class _TarjetaRespuestaState extends State<TarjetaRespuesta> {
           Text(r.texto, style: tema.textTheme.bodyLarge),
           if (r.consultaTraducida != null) ...[
             const SizedBox(height: 12),
-            Text('buscado en espanol como "${r.consultaTraducida}"',
+            Text('buscado en español como "${r.consultaTraducida}"',
                 style: tema.textTheme.bodySmall),
           ],
           if (r.respaldo.isNotEmpty) ...[
@@ -103,7 +103,7 @@ class _TarjetaRespuestaState extends State<TarjetaRespuesta> {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 12),
-            Text('PASAJES QUE PODRIAN TRATARLA', style: tema.textTheme.titleSmall),
+            Text('PASAJES QUE PODRÍAN TRATARLA', style: tema.textTheme.titleSmall),
             const SizedBox(height: 10),
             ...r.pasajes.map(
               (p) => Padding(
