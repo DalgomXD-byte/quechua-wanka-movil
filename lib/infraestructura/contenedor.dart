@@ -1,12 +1,19 @@
 import '../dominio/puertos/asistente_port.dart';
-import 'adaptadores/salida/asistente_http.dart';
+import 'adaptadores/salida/asistente_local.dart';
 
 /// Unico lugar donde se decide con que tecnologia se cumple cada puerto.
 ///
-/// El incremento offline cambia esta linea y nada mas: ni el dominio, ni la
-/// interfaz, ni las pantallas conocen al adaptador que hay detras.
+/// Aqui estaba, hasta el incremento offline, `AsistenteHttp()`, que resolvia la consulta
+/// contra el servicio de escritorio. Cambiar esa linea por `AsistenteLocal.cargar()` es
+/// todo lo que hizo falta para que la aplicacion deje de necesitar red: ni el dominio, ni
+/// los casos de uso, ni una sola pantalla se tocaron. El adaptador HTTP sigue en el
+/// proyecto y sigue siendo valido, por si conviene volver a apuntar al escritorio para
+/// comparar comportamientos.
 class Contenedor {
-  Contenedor() : asistente = AsistenteHttp();
+  const Contenedor._(this.asistente);
 
   final AsistentePort asistente;
+
+  static Future<Contenedor> cargar() async =>
+      Contenedor._(await AsistenteLocal.cargar());
 }

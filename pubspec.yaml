@@ -58,6 +58,12 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # El indice completo viaja dentro de la aplicacion: 12,6 MB frente a los 1,2 GB que
+  # habria costado el codificador denso que el diseño original preveia. Es lo que permite
+  # que la consulta se resuelva sin red.
+  assets:
+    - assets/indice/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
