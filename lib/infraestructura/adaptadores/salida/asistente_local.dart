@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint, kReleaseMode;
 
 import '../../../aplicacion/servicios/compositor_respuesta.dart';
 import '../../../aplicacion/servicios/detector_idioma.dart';
@@ -62,7 +62,7 @@ class AsistenteLocal implements AsistentePort {
     final reloj = Stopwatch()..start();
     final indice = await IndicePortable.cargar();
     final traductor = await TraductorTabla.cargar();
-    if (kDebugMode) {
+    if (!kReleaseMode) {
       debugPrint('MEDICION arranque_ms=${reloj.elapsedMilliseconds} '
           'fragmentos=${indice.fragmentos.length}');
     }
@@ -92,7 +92,7 @@ class AsistenteLocal implements AsistentePort {
   Future<Respuesta> consultar(String texto) async {
     final reloj = Stopwatch()..start();
     final respuesta = _resolver(texto);
-    if (kDebugMode) {
+    if (!kReleaseMode) {
       debugPrint('MEDICION consulta_ms=${reloj.elapsedMicroseconds / 1000} '
           'abstenida=${respuesta.abstenida}');
     }
