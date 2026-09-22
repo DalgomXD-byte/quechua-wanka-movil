@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firma de la aplicacion: la clave privada y su contrasena no se versionan
+android/clave-quechua-wanka.jks
+android/key.properties
