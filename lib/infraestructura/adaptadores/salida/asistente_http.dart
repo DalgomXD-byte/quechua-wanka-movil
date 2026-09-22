@@ -88,6 +88,7 @@ class AsistenteHttp implements AsistentePort {
         similitudMaxima: (datos['similitud_maxima'] as num?)?.toDouble() ?? 0.0,
         consultaTraducida: datos['consulta_traducida'] as String?,
         aviso: datos['aviso'] as String?,
+        pasajes: _aFragmentos(datos['pasajes']),
         respaldo: ((datos['respaldo'] as List<dynamic>?) ?? const [])
             .cast<Map<String, dynamic>>()
             .map(
@@ -104,6 +105,23 @@ class AsistenteHttp implements AsistentePort {
             )
             .toList(),
       );
+
+  List<FragmentoRespaldo> _aFragmentos(Object? crudo) =>
+      ((crudo as List<dynamic>?) ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(
+            (f) => FragmentoRespaldo(
+              id: f['fragmento_id'] as String,
+              texto: f['texto'] as String,
+              procedencia: Procedencia(
+                documento: f['documento'] as String,
+                pagina: f['pagina'] as int,
+              ),
+              puntuacion: (f['puntuacion'] as num).toDouble(),
+              coincidenciaLema: f['coincidencia_lema'] as bool? ?? false,
+            ),
+          )
+          .toList();
 }
 
 /// Fallo que la interfaz puede mostrar al usuario tal cual.

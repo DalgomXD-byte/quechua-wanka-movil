@@ -45,8 +45,12 @@ class _TarjetaRespuestaState extends State<TarjetaRespuesta> {
                   Icon(Icons.info_outline,
                       size: 15, color: esquema.onSurface.withValues(alpha: 0.45)),
                   const SizedBox(width: 6),
-                  Text('sin respaldo documental',
-                      style: tema.textTheme.titleSmall),
+                  Text(
+                    r.tienePasajes
+                        ? 'sin respuesta confirmada'
+                        : 'sin respaldo documental',
+                    style: tema.textTheme.titleSmall,
+                  ),
                 ],
               ),
             ),
@@ -94,6 +98,45 @@ class _TarjetaRespuestaState extends State<TarjetaRespuesta> {
                   ),
                 ),
               ),
+          ],
+          if (r.tienePasajes) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            Text('PASAJES QUE PODRIAN TRATARLA', style: tema.textTheme.titleSmall),
+            const SizedBox(height: 10),
+            ...r.pasajes.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.only(left: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: esquema.primary.withValues(alpha: 0.35),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(p.texto, style: tema.textTheme.bodyMedium),
+                    ),
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        p.procedencia.citar(),
+                        style: tema.textTheme.bodySmall?.copyWith(
+                          color: esquema.primary.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
           if (r.aviso != null) ...[
             const SizedBox(height: 4),

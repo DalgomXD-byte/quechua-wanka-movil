@@ -119,6 +119,40 @@ void main() {
     expect(find.byIcon(Icons.cloud_off), findsNothing);
   });
 
+  testWidgets('una abstencion con pasajes los muestra citados', (tester) async {
+    await _montar(
+      tester,
+      AsistenteFalso(
+        respuesta: const Respuesta(
+          consultaId: 'z',
+          texto: 'No tengo una respuesta confirmada para esa consulta.',
+          abstenida: true,
+          idioma: Idioma.espanol,
+          similitudMaxima: 0.21,
+          pasajes: [
+            FragmentoRespaldo(
+              id: 'p133',
+              texto: 'El ablativo se marca mediante el sufijo piqta.',
+              procedencia: Procedencia(documento: 'gramatica.pdf', pagina: 133),
+              puntuacion: 0.208,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'que es el sufijo ablativo');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    // Se distingue de la abstencion seca: hay material, pero no es una respuesta.
+    expect(find.text('sin respuesta confirmada'), findsOneWidget);
+    expect(find.text('sin respaldo documental'), findsNothing);
+    // Los pasajes llegan desplegados y citados, al contrario que el respaldo.
+    expect(find.textContaining('sufijo piqta'), findsOneWidget);
+    expect(find.textContaining('p. 133'), findsOneWidget);
+  });
+
   testWidgets('tocar una consulta reciente la repite', (tester) async {
     final asistente = AsistenteFalso(respuesta: _respaldada());
     await _montar(tester, asistente);
