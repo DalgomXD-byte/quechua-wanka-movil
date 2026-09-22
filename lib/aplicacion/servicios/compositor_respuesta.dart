@@ -82,6 +82,39 @@ class CompositorRespuesta {
     return buffer.toString();
   }
 
+  /// Redacta varias lecturas cuando el termino consultado corresponde a mas de una
+  /// entrada del corpus.
+  ///
+  /// Una palabra inglesa corriente no tiene un solo equivalente espanol: "boiled corn"
+  /// lleva a comijn, mote y choclo, y las tres son entradas reales del diccionario.
+  /// Elegir una por su puntuacion seria elegir por ruido, porque la puntuacion de cada
+  /// candidata mide lo bien que casa consigo misma y no lo bien que responde a la
+  /// consulta: buscar "choclo" hace que la entrada CHOCLO puntue alto por fuerza. Quien
+  /// pregunta sabe que sentido queria, de modo que se le entregan todos y elige el.
+  String componerVarios(
+    List<LecturaLexica> lecturas,
+    Idioma idioma,
+    String terminoConsultado,
+  ) {
+    final termino = terminoConsultado.trim().toLowerCase();
+    final buffer = StringBuffer(
+      idioma == Idioma.ingles
+          ? '"$termino" corresponds to several entries in the corpus:'
+          : '"$termino" corresponde a varias entradas del corpus:',
+    );
+    // Una por linea: puestas seguidas, cinco correspondencias se leen como una frase
+    // atropellada y dejan de poder compararse de un vistazo, que es justo para lo que se
+    // entregan todas.
+    for (final lectura in lecturas) {
+      final formas = _unir(
+        lectura.entrada.formas,
+        idioma == Idioma.ingles ? 'or' : 'o',
+      );
+      buffer.write('\n${lectura.sentido} — $formas');
+    }
+    return buffer.toString();
+  }
+
   static String _unir(List<String> formas, String conjuncion) {
     if (formas.length == 1) return formas.single;
     return '${formas.sublist(0, formas.length - 1).join(', ')} '
@@ -105,6 +138,15 @@ class EntradaLexica {
 
   /// Sentidos matizados que la entrada distingue, como "(perrito)".
   final List<Matiz> matices;
+}
+
+/// Una de las lecturas espanolas de un termino consultado, con su entrada.
+class LecturaLexica {
+  const LecturaLexica(this.sentido, this.entrada);
+
+  /// El termino espanol por el que se llego a la entrada.
+  final String sentido;
+  final EntradaLexica entrada;
 }
 
 class Matiz {

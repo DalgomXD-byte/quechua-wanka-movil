@@ -153,6 +153,13 @@ class AsistenteLocal implements AsistentePort {
     final terminoBuscado = _indice.depurador.depurar(buscado);
     final entrada = _compositor.extraer(mejor.texto, terminoBuscado);
 
+    // Cuando el termino lleva a varias entradas distintas del corpus se entregan todas,
+    // en el orden de precision con que la tabla ofrecio cada candidata. Es el unico orden
+    // con sentido: las puntuaciones no son comparables entre candidatas, porque la de
+    // cada una mide lo bien que casa consigo misma y no lo bien que responde a la
+    // consulta. Buscar "choclo" hace que la entrada CHOCLO puntue alto por fuerza.
+    final lecturas = _lecturas(recuperados, origen, candidatas);
+
     return Respuesta(
       consultaId: id,
       // Sin entrada que descomponer no se redacta nada: se entrega el fragmento literal.
@@ -161,16 +168,46 @@ class AsistenteLocal implements AsistentePort {
       // La frase nombra el termino que escribio el usuario, no el que se uso para
       // buscar: quien pregunta por "love" espera leer "love" y no "amor", que es un
       // detalle interno de como se alcanzo la entrada. Con que se busco se dice aparte.
-      texto: entrada == null
-          ? mejor.texto
-          : _compositor.componer(entrada, idioma, termino),
+      texto: lecturas.length > 1
+          ? _compositor.componerVarios(lecturas, idioma, termino)
+          : entrada == null
+              ? mejor.texto
+              : _compositor.componer(entrada, idioma, termino),
       abstenida: false,
       idioma: idioma,
       similitudMaxima: _evaluador.similitudMaxima(recuperados),
       respaldo: recuperados,
-      consultaTraducida: buscado == texto ? null : terminoBuscado,
+      // Con varias lecturas no se anuncia una sola: decir que se busco "choclo" cuando
+      // se busco con cinco terminos seria falso, y los cinco ya figuran en la respuesta.
+      consultaTraducida:
+          lecturas.length > 1 || buscado == texto ? null : terminoBuscado,
       aviso: _avisoAlcance,
     );
+  }
+
+  /// Entradas distintas del corpus a las que lleva la consulta, en el orden en que la
+  /// tabla ofrecio las candidatas: primero las de coincidencia exacta y al final las
+  /// obtenidas por aproximacion, que son las menos fiables.
+  List<LecturaLexica> _lecturas(
+    List<FragmentoRespaldo> recuperados,
+    Map<String, String> origen,
+    List<String> candidatas,
+  ) {
+    final porSentido = <String, LecturaLexica>{};
+    for (final recuperado in recuperados) {
+      if (!recuperado.coincidenciaLema) continue;
+      final sentido = _indice.depurador.depurar(origen[recuperado.id] ?? '');
+      if (sentido.isEmpty || porSentido.containsKey(sentido)) continue;
+      final entrada = _compositor.extraer(recuperado.texto, sentido);
+      if (entrada != null) porSentido[sentido] = LecturaLexica(sentido, entrada);
+    }
+
+    final ordenadas = <LecturaLexica>[];
+    for (final candidata in candidatas) {
+      final lectura = porSentido.remove(candidata);
+      if (lectura != null) ordenadas.add(lectura);
+    }
+    return [...ordenadas, ...porSentido.values];
   }
 
   /// Recupera con la consulta original y con cada lectura espanola plausible, conservando
