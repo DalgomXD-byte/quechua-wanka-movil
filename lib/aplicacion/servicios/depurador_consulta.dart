@@ -6,9 +6,9 @@
 /// diferencia aqui invalidaria el umbral que viaja con el indice.
 class DepuradorConsulta {
   DepuradorConsulta(List<String> plantillas)
-      : _plantillas = plantillas
-            .map((p) => RegExp(p, caseSensitive: false, unicode: true))
-            .toList();
+    : _plantillas = plantillas
+          .map((p) => RegExp(p, caseSensitive: false, unicode: true))
+          .toList();
 
   final List<RegExp> _plantillas;
 

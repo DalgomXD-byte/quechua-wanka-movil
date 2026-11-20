@@ -41,21 +41,25 @@ class IndicePortable {
   DepuradorConsulta get depurador => _depurador;
 
   static Future<IndicePortable> cargar() async {
-    final manifiesto = jsonDecode(
-      await rootBundle.loadString('$carpetaIndice/manifiesto.json'),
-    ) as Map<String, dynamic>;
+    final manifiesto =
+        jsonDecode(
+              await rootBundle.loadString('$carpetaIndice/manifiesto.json'),
+            )
+            as Map<String, dynamic>;
 
-    final crudos = jsonDecode(
-      await rootBundle.loadString('$carpetaIndice/fragmentos.json'),
-    ) as List<dynamic>;
+    final crudos =
+        jsonDecode(
+              await rootBundle.loadString('$carpetaIndice/fragmentos.json'),
+            )
+            as List<dynamic>;
     final fragmentos = crudos
         .cast<Map<String, dynamic>>()
         .map(FragmentoIndexado.desdeJson)
         .toList(growable: false);
 
-    final lemarioCrudo = jsonDecode(
-      await rootBundle.loadString('$carpetaIndice/lemario.json'),
-    ) as Map<String, dynamic>;
+    final lemarioCrudo =
+        jsonDecode(await rootBundle.loadString('$carpetaIndice/lemario.json'))
+            as Map<String, dynamic>;
 
     return IndicePortable._(
       fragmentos: fragmentos,
@@ -64,7 +68,11 @@ class IndicePortable {
         (manifiesto['plantillas_depuracion'] as List<dynamic>).cast<String>(),
       ),
       palabras: await Campo.cargar('palabras', manifiesto, fragmentos.length),
-      caracteres: await Campo.cargar('caracteres', manifiesto, fragmentos.length),
+      caracteres: await Campo.cargar(
+        'caracteres',
+        manifiesto,
+        fragmentos.length,
+      ),
       lemario: {
         for (final entrada in lemarioCrudo.entries)
           entrada.key: (entrada.value as List<dynamic>).cast<int>(),
@@ -117,11 +125,13 @@ class IndicePortable {
     ]..sort((a, b) => puntuaciones[b].compareTo(puntuaciones[a]));
 
     return [
-      for (final i in prosa.take(k)) fragmentos[i].aRespaldo(puntuaciones[i], false),
+      for (final i in prosa.take(k))
+        fragmentos[i].aRespaldo(puntuaciones[i], false),
     ];
   }
 
-  bool esLema(String termino) => _lemario.containsKey(_depurador.depurar(termino));
+  bool esLema(String termino) =>
+      _lemario.containsKey(_depurador.depurar(termino));
 
   static final _patronToken = RegExp(r'[\p{L}\p{N}_]+', unicode: true);
   static final _espaciosMultiples = RegExp(r'\s\s+');
@@ -131,7 +141,11 @@ class IndicePortable {
 
   /// Reproduce el analizador `char_wb` de scikit-learn: cada palabra se rodea de espacios y
   /// se extraen sus n-gramas de 3 a 5; una palabra mas corta que n se cuenta una sola vez.
-  static List<String> tokensCaracter(String texto, {int nMin = 3, int nMax = 5}) {
+  static List<String> tokensCaracter(
+    String texto, {
+    int nMin = 3,
+    int nMax = 5,
+  }) {
     final limpio = texto.toLowerCase().replaceAll(_espaciosMultiples, ' ');
     final salida = <String>[];
     for (final palabra in limpio.split(' ')) {
@@ -143,7 +157,9 @@ class IndicePortable {
         salida.add(w.substring(0, math.min(n, largo)));
         while (desplazamiento + n < largo) {
           desplazamiento++;
-          salida.add(w.substring(desplazamiento, math.min(desplazamiento + n, largo)));
+          salida.add(
+            w.substring(desplazamiento, math.min(desplazamiento + n, largo)),
+          );
         }
         if (desplazamiento == 0) break;
       }
@@ -175,10 +191,14 @@ class Campo {
     Map<String, dynamic> manifiesto,
     int filas,
   ) async {
-    final terminos = (jsonDecode(
-      await rootBundle.loadString('$carpetaIndice/vocab_$nombre.json'),
-    ) as List<dynamic>)
-        .cast<String>();
+    final terminos =
+        (jsonDecode(
+                  await rootBundle.loadString(
+                    '$carpetaIndice/vocab_$nombre.json',
+                  ),
+                )
+                as List<dynamic>)
+            .cast<String>();
 
     final idfCrudo = await rootBundle.load('$carpetaIndice/idf_$nombre.bin');
     final meta = manifiesto['matriz_$nombre'] as Map<String, dynamic>;
@@ -191,7 +211,10 @@ class Campo {
 
     return Campo(
       vocabulario: {for (var i = 0; i < terminos.length; i++) terminos[i]: i},
-      idf: idfCrudo.buffer.asFloat32List(idfCrudo.offsetInBytes, terminos.length),
+      idf: idfCrudo.buffer.asFloat32List(
+        idfCrudo.offsetInBytes,
+        terminos.length,
+      ),
       indptr: matriz.buffer.asUint32List(matriz.offsetInBytes, columnas + 1),
       indices: matriz.buffer.asUint32List(matriz.offsetInBytes + corte1, nnz),
       datos: matriz.buffer.asFloat32List(matriz.offsetInBytes + corte2, nnz),
@@ -248,7 +271,8 @@ class FragmentoIndexado {
     required this.esLexicografico,
   });
 
-  factory FragmentoIndexado.desdeJson(Map<String, dynamic> json) => FragmentoIndexado(
+  factory FragmentoIndexado.desdeJson(Map<String, dynamic> json) =>
+      FragmentoIndexado(
         id: json['id'] as String,
         texto: json['t'] as String,
         documento: json['d'] as String,

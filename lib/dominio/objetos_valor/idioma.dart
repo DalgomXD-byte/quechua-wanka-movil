@@ -10,8 +10,8 @@ enum Idioma {
   final String codigo;
 
   static Idioma desdeCodigo(String? codigo) => switch (codigo) {
-        'es' => Idioma.espanol,
-        'en' => Idioma.ingles,
-        _ => Idioma.noSoportado,
-      };
+    'es' => Idioma.espanol,
+    'en' => Idioma.ingles,
+    _ => Idioma.noSoportado,
+  };
 }

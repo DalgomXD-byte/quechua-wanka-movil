@@ -32,7 +32,11 @@ class CompositorRespuesta {
       if (DepuradorConsulta.normalizar(lema).trim() != buscado) continue;
 
       final cuerpo = m[2]!;
-      final principal = cuerpo.split('(').first.trim().replaceAll(RegExp(r'\.+$'), '');
+      final principal = cuerpo
+          .split('(')
+          .first
+          .trim()
+          .replaceAll(RegExp(r'\.+$'), '');
       final formas = _separar(principal);
       if (formas.isEmpty) continue;
 
@@ -50,15 +54,16 @@ class CompositorRespuesta {
     return null;
   }
 
-  static List<String> _separar(String texto) => texto
-      .split(',')
-      .map((f) => f.trim())
-      .where((f) => f.isNotEmpty)
-      .toList();
+  static List<String> _separar(String texto) =>
+      texto.split(',').map((f) => f.trim()).where((f) => f.isNotEmpty).toList();
 
   /// Redacta la correspondencia. El texto sale de una plantilla fija, de modo que no
   /// puede introducir nada que la entrada no registre.
-  String componer(EntradaLexica entrada, Idioma idioma, String terminoConsultado) {
+  String componer(
+    EntradaLexica entrada,
+    Idioma idioma,
+    String terminoConsultado,
+  ) {
     final termino = terminoConsultado.trim().isEmpty
         ? entrada.lema.toLowerCase()
         : terminoConsultado.trim().toLowerCase();

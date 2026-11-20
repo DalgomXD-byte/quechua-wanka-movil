@@ -5,8 +5,11 @@ import '../../../aplicacion/servicios/detector_idioma.dart';
 import '../../../aplicacion/servicios/evaluador_confianza.dart';
 import '../../../dominio/entidades/entrada_historial.dart';
 import '../../../dominio/entidades/fragmento_respaldo.dart';
+import '../../../dominio/entidades/fuente.dart';
+import '../../../dominio/entidades/prediccion_ml.dart';
 import '../../../dominio/entidades/respuesta.dart';
 import '../../../dominio/objetos_valor/idioma.dart';
+import '../../../dominio/objetos_valor/modo_consulta.dart';
 import '../../../dominio/puertos/asistente_port.dart';
 import 'historial_sqlite.dart';
 import 'indice_portable.dart';
@@ -19,19 +22,19 @@ const _avisoAlcance =
 const _sinRespaldo = {
   Idioma.espanol:
       'No dispongo de respaldo documental para esa consulta en el corpus indexado. '
-          'No propongo ninguna traducción, para evitar introducir una forma no documentada.',
+      'No propongo ninguna traducción, para evitar introducir una forma no documentada.',
   Idioma.ingles:
       'I have no documentary support for that query in the indexed corpus. I will not '
-          'propose a translation, to avoid introducing an undocumented form.',
+      'propose a translation, to avoid introducing an undocumented form.',
 };
 
 const _conPasajes = {
   Idioma.espanol:
       'No tengo una respuesta confirmada para esa consulta. Estos pasajes del corpus '
-          'podrían tratarla; léelos y juzga tú.',
+      'podrían tratarla; léelos y juzga tú.',
   Idioma.ingles:
       'I have no confirmed answer for that query. These passages from the corpus may '
-          'deal with it; read them and judge for yourself.',
+      'deal with it; read them and judge for yourself.',
 };
 
 /// Resuelve la consulta en el propio dispositivo, sin red de ninguna clase.
@@ -63,8 +66,10 @@ class AsistenteLocal implements AsistentePort {
     final indice = await IndicePortable.cargar();
     final traductor = await TraductorTabla.cargar();
     if (!kReleaseMode) {
-      debugPrint('MEDICION arranque_ms=${reloj.elapsedMilliseconds} '
-          'fragmentos=${indice.fragmentos.length}');
+      debugPrint(
+        'MEDICION arranque_ms=${reloj.elapsedMilliseconds} '
+        'fragmentos=${indice.fragmentos.length}',
+      );
     }
     HistorialSqlite? base = historial;
     if (base == null) {
@@ -77,12 +82,48 @@ class AsistenteLocal implements AsistentePort {
     return AsistenteLocal._(indice, traductor, base);
   }
 
+  HistorialSqlite? get almacen => _historial;
+
   @override
   Future<EstadoSistema> estado() async => EstadoSistema(
-        fragmentosIndexados: _indice.fragmentos.length,
-        umbralAbstencion: _indice.umbralAbstencion,
-        disponible: true,
-      );
+    fragmentosIndexados: _indice.fragmentos.length,
+    umbralAbstencion: _indice.umbralAbstencion,
+    disponible: true,
+    modo: ModoConsulta.sinConexion,
+    documentos: _indice.fragmentos.map((f) => f.documento).toSet().length,
+    generador: 'compositor determinista',
+  );
+
+  /// Sin conexion solo se sabe lo que trae el indice exportado: el archivo y cuantos
+  /// fragmentos aporta. La entidad y la licencia viven en el registro de fuentes de la nube.
+  @override
+  Future<List<Fuente>> fuentes() async {
+    final conteo = <String, int>{};
+    final paginas = <String, Set<int>>{};
+    for (final f in _indice.fragmentos) {
+      conteo[f.documento] = (conteo[f.documento] ?? 0) + 1;
+      (paginas[f.documento] ??= <int>{}).add(f.pagina);
+    }
+    final documentos = conteo.keys.toList()..sort();
+    return [
+      for (final d in documentos)
+        Fuente(
+          nombreArchivo: d,
+          fragmentos: conteo[d],
+          paginasTotales: paginas[d]!.length,
+        ),
+    ];
+  }
+
+  /// El telefono no ejecuta los clasificadores del PMV2 (ADR-026, ADR-038): no se simula.
+  @override
+  Future<PrediccionMl> predecir(
+    String texto,
+  ) async => throw const ErrorConsulta(
+    'La predicción ML se calcula en la nube. Sin conexión el teléfono no ejecuta los '
+    'modelos: responde solo con el umbral τ = 0,48 y la coincidencia de lema.',
+    tipo: TipoErrorConsulta.noDisponible,
+  );
 
   @override
   Future<List<EntradaHistorial>> historial({int limite = 20}) async =>
@@ -91,10 +132,30 @@ class AsistenteLocal implements AsistentePort {
   @override
   Future<Respuesta> consultar(String texto) async {
     final reloj = Stopwatch()..start();
-    final respuesta = _resolver(texto);
+    final resuelta = _resolver(texto);
+    final ms = reloj.elapsedMicroseconds / 1000;
+    final respuesta = Respuesta(
+      consultaId: resuelta.consultaId,
+      texto: resuelta.texto,
+      abstenida: resuelta.abstenida,
+      idioma: resuelta.idioma,
+      modo: ModoConsulta.sinConexion,
+      similitudMaxima: resuelta.similitudMaxima,
+      respaldo: resuelta.respaldo,
+      consultaTraducida: resuelta.consultaTraducida,
+      aviso: resuelta.aviso,
+      pasajes: resuelta.pasajes,
+      umbral: _indice.umbralAbstencion,
+      viaRespaldo: resuelta.abstenida
+          ? null
+          : (resuelta.similitudMaxima >= _indice.umbralAbstencion
+                ? 'similitud'
+                : 'lema'),
+      latenciaMs: ms,
+      redactadoPor: resuelta.abstenida ? null : 'compositor determinista',
+    );
     if (!kReleaseMode) {
-      debugPrint('MEDICION consulta_ms=${reloj.elapsedMicroseconds / 1000} '
-          'abstenida=${respuesta.abstenida}');
+      debugPrint('MEDICION consulta_ms=$ms abstenida=${respuesta.abstenida}');
     }
     await _historial?.registrar(
       EntradaHistorial(
@@ -103,6 +164,7 @@ class AsistenteLocal implements AsistentePort {
         abstenida: respuesta.abstenida,
         similitudMaxima: respuesta.similitudMaxima,
         momento: DateTime.now(),
+        modo: ModoConsulta.sinConexion,
       ),
     );
     return respuesta;
@@ -113,7 +175,10 @@ class AsistenteLocal implements AsistentePort {
     var idioma = _detector.detectar(texto);
     final termino = _indice.depurador.depurar(texto);
 
-    var candidatas = _traductor.candidatas(termino, aproximar: idioma == Idioma.ingles);
+    var candidatas = _traductor.candidatas(
+      termino,
+      aproximar: idioma == Idioma.ingles,
+    );
     // Una palabra inglesa suelta ("love") no trae ninguna marca funcional que contar, de
     // modo que el detector la asume espanola y nunca se traduciria. Si el termino no
     // encabeza ninguna entrada del corpus pero si figura en la tabla como palabra
@@ -171,16 +236,17 @@ class AsistenteLocal implements AsistentePort {
       texto: lecturas.length > 1
           ? _compositor.componerVarios(lecturas, idioma, termino)
           : entrada == null
-              ? mejor.texto
-              : _compositor.componer(entrada, idioma, termino),
+          ? mejor.texto
+          : _compositor.componer(entrada, idioma, termino),
       abstenida: false,
       idioma: idioma,
       similitudMaxima: _evaluador.similitudMaxima(recuperados),
       respaldo: recuperados,
       // Con varias lecturas no se anuncia una sola: decir que se busco "choclo" cuando
       // se busco con cinco terminos seria falso, y los cinco ya figuran en la respuesta.
-      consultaTraducida:
-          lecturas.length > 1 || buscado == texto ? null : terminoBuscado,
+      consultaTraducida: lecturas.length > 1 || buscado == texto
+          ? null
+          : terminoBuscado,
       aviso: _avisoAlcance,
     );
   }
@@ -199,7 +265,9 @@ class AsistenteLocal implements AsistentePort {
       final sentido = _indice.depurador.depurar(origen[recuperado.id] ?? '');
       if (sentido.isEmpty || porSentido.containsKey(sentido)) continue;
       final entrada = _compositor.extraer(recuperado.texto, sentido);
-      if (entrada != null) porSentido[sentido] = LecturaLexica(sentido, entrada);
+      if (entrada != null) {
+        porSentido[sentido] = LecturaLexica(sentido, entrada);
+      }
     }
 
     final ordenadas = <LecturaLexica>[];

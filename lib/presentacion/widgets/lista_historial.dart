@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../dominio/entidades/entrada_historial.dart';
+import '../../dominio/objetos_valor/modo_consulta.dart';
+import '../tema.dart';
 
-/// Consultas anteriores. Se puede volver a cualquiera con un toque.
+/// Consultas anteriores de este teléfono. Se puede volver a cualquiera con un toque.
 class ListaHistorial extends StatelessWidget {
   const ListaHistorial({
     super.key,
@@ -15,36 +17,59 @@ class ListaHistorial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entradas.isEmpty) return const SizedBox.shrink();
     final tema = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('RECIENTES', style: tema.textTheme.titleSmall),
+        Text('Historial de consultas', style: tema.textTheme.titleMedium),
         const SizedBox(height: 4),
+        Text(
+          'No se guardan datos personales: las consultas se almacenan solo en este teléfono.',
+          style: tema.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 6),
+        if (entradas.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Todavía no hay consultas.',
+              style: tema.textTheme.bodySmall,
+            ),
+          ),
         ...entradas.map(
           (e) => InkWell(
             onTap: () => onRepetir(e.consulta),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 11),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      e.consulta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: tema.textTheme.bodyMedium?.copyWith(
-                        color: tema.colorScheme.onSurface.withValues(alpha: 0.78),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      e.modo == ModoConsulta.enLinea
+                          ? Icons.cloud_outlined
+                          : Icons.phone_android,
+                      size: 16,
+                      color: Paleta.tintaSuave,
+                      semanticLabel: e.modo.origenRespuesta,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        e.consulta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tema.textTheme.bodyMedium,
                       ),
                     ),
-                  ),
-                  if (e.abstenida)
-                    Icon(Icons.remove,
-                        size: 14,
-                        color: tema.colorScheme.onSurface.withValues(alpha: 0.3)),
-                ],
+                    Text(
+                      e.abstenida ? 'sin respaldo' : 'con respaldo',
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: e.abstenida ? Paleta.abstencion : Paleta.acento,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

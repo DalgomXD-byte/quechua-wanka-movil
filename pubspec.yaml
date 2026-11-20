@@ -1,5 +1,5 @@
 name: quechua_wanka
-description: "A new Flutter project."
+description: "Asistente de consulta del quechua wanka: cliente de la nube con respaldo sin conexion."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -66,6 +66,8 @@ flutter:
   # que la consulta se resuelva sin red.
   assets:
     - assets/indice/
+    - assets/marca/logo_contorno_1024.png
+    - assets/marca/logo_icono_1024.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
