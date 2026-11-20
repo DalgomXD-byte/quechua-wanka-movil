@@ -49,6 +49,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.3
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -99,3 +100,17 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Icono del lanzador (B11): el logo aprobado el 19/11, con la paleta de la web.
+# Icono adaptativo de Android: fondo #8A5A2B y el simbolo en #FAF7F2 y #E8C79A.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/marca/logo_icono_1024.png"
+  adaptive_icon_background: "#8A5A2B"
+  adaptive_icon_foreground: "assets/marca/logo_primer_plano_1024.png"
+  min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/marca/logo_icono_1024.png"
+    icon_size: 256
