@@ -59,7 +59,12 @@ class AsistenteLocal implements AsistentePort {
 
   var _contador = 0;
 
-  static Future<AsistenteLocal> cargar({HistorialSqlite? historial}) async {
+  /// [sinHistorial] evita abrir la base: lo usa el arnes del dispositivo, que no debe dejar
+  /// 248 consultas de prueba en el historial del telefono.
+  static Future<AsistenteLocal> cargar({
+    HistorialSqlite? historial,
+    bool sinHistorial = false,
+  }) async {
     // Las mediciones de RNF-01 y RNF-02 se toman aqui, en el dispositivo real, y no en
     // el escritorio de desarrollo: la arquitectura y la memoria son otras.
     final reloj = Stopwatch()..start();
@@ -72,7 +77,7 @@ class AsistenteLocal implements AsistentePort {
       );
     }
     HistorialSqlite? base = historial;
-    if (base == null) {
+    if (base == null && !sinHistorial) {
       try {
         base = await HistorialSqlite.abrir();
       } catch (_) {
