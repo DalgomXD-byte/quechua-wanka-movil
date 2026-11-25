@@ -24,9 +24,13 @@ class TraductorTabla {
   static const _largoMinimoCompuesto = 7;
 
   static Future<TraductorTabla> cargar() async {
-    final crudo = jsonDecode(
-      await rootBundle.loadString('$carpetaIndice/traduccion_en_es.json'),
-    ) as Map<String, dynamic>;
+    final crudo =
+        jsonDecode(
+              await rootBundle.loadString(
+                '$carpetaIndice/traduccion_en_es.json',
+              ),
+            )
+            as Map<String, dynamic>;
     return TraductorTabla._({
       for (final entrada in crudo.entries)
         DepuradorConsulta.normalizar(entrada.key).trim():

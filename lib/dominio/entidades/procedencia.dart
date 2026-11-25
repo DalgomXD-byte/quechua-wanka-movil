@@ -8,7 +8,10 @@ class Procedencia {
 
   /// Nombre legible del documento, sin la extension ni el ruido del archivo.
   String get titulo {
-    final base = documento.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), '');
+    final base = documento.replaceAll(
+      RegExp(r'\.pdf$', caseSensitive: false),
+      '',
+    );
     return base.replaceAll(RegExp(r'[_\-]+'), ' ').trim();
   }
 

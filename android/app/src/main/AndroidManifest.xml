@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Modo en linea (ADR-038): sin este permiso el APK release no puede llegar a la API y la
+         app caeria siempre al modo sin conexion. Antes solo estaba en los manifiestos de debug y
+         profile. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Quechua Wanka"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

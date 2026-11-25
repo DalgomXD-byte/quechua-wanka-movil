@@ -36,10 +36,14 @@ class EvaluadorConfianza {
     // La coincidencia de lema no puede producir un falso positivo: solo se activa cuando
     // el termino consultado figura literalmente como entrada del corpus indexado.
     if (recuperados.any((r) => r.coincidenciaLema)) return true;
-    return recuperados.map((r) => r.puntuacion).reduce((a, b) => a > b ? a : b) >= umbral;
+    return recuperados
+            .map((r) => r.puntuacion)
+            .reduce((a, b) => a > b ? a : b) >=
+        umbral;
   }
 
-  double similitudMaxima(List<FragmentoRespaldo> recuperados) => recuperados.isEmpty
+  double similitudMaxima(List<FragmentoRespaldo> recuperados) =>
+      recuperados.isEmpty
       ? 0.0
       : recuperados.map((r) => r.puntuacion).reduce((a, b) => a > b ? a : b);
 
@@ -55,8 +59,9 @@ class EvaluadorConfianza {
   }) {
     final delUsuario = palabrasDeContenido(consulta);
     // Una consulta con una sola palabra de contenido no puede compartir dos.
-    final exigidas =
-        palabrasCompartidas < delUsuario.length ? palabrasCompartidas : delUsuario.length;
+    final exigidas = palabrasCompartidas < delUsuario.length
+        ? palabrasCompartidas
+        : delUsuario.length;
 
     return recuperados.where((r) {
       if (r.puntuacion < pisoPasajes) return false;

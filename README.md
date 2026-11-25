@@ -1,13 +1,22 @@
 # Asistente de consulta del quechua wanka — aplicación móvil
 
 Aplicación Android que consulta el corpus documental publicado sobre el quechua wanka de
-Junín **resolviendo todo en el dispositivo, sin red de ninguna clase**. Ninguna consulta ni
-fragmento del corpus sale del teléfono.
+Junín en **dos modos** (ADR-038 del proyecto):
 
-Es el incremento móvil del proyecto. La versión de escritorio —servicio, interfaz web,
-base de datos e ingesta documental— vive en
-[asistente-quechua-wanka](https://github.com/DalgomXD-byte/asistente-quechua-wanka), y de
-ahí salen los artefactos que esta aplicación empaqueta.
+- **En línea (principal):** cliente de la API desplegada (`https://quechua-api.onrender.com`), con
+  los mismos endpoints públicos que la web: respuesta con cita, abstención, pasajes, predicción ML y
+  fuentes del corpus.
+- **Sin conexión (respaldo):** todo se resuelve en el dispositivo con el índice exportado y el
+  compositor determinista. Ninguna consulta sale del teléfono.
+
+En automático la app usa la nube y pasa sola al corpus del teléfono si no hay red, si la API no
+responde en 20 s o si devuelve un 5xx. También hay un selector manual. El modo activo se ve siempre
+en la cabecera y cada respuesta dice de qué modo vino. Ante un 429 muestra la espera que pide el
+servidor y no reintenta sola. La app no lleva tokens ni funciones de administración.
+
+Es el incremento móvil del proyecto (PMV3). El backend, la web y la documentación viven en
+[TP_RAG_Quechua](https://github.com/omarpiero/TP_RAG_Quechua), y de ahí salen los artefactos que
+esta aplicación empaqueta.
 
 ## Qué hace
 
@@ -41,14 +50,15 @@ conjunto de evaluación.
 
 | | |
 |---|---|
-| Paquete de instalación (ARM64) | 21,5 MB |
+| Paquete de instalación release (arm64-v8a / armeabi-v7a / x86_64) | 22,6 / 20,2 / 24,0 MB |
 | Índice completo empaquetado | 12 MB, 3605 fragmentos |
-| Arranque | ~1,5 s |
-| Consulta | 1,7 – 19 ms |
+| Arranque en frío (`am start -W`, profile) | 682–788 ms; índice listo en 140–175 ms |
+| Consulta sin conexión, 248 consultas | P50 0,80 ms · P95 2,71 ms |
+| Arnés de 248 consultas en el dispositivo | recall@5 1,000 en A, B y D; 0 falsos positivos en C |
 
-Las latencias están tomadas en emulador x86_64 y **no sirven para declarar requisitos no
-funcionales**: para eso hay que medir en un dispositivo ARM real. La instrumentación está
-puesta bajo `kDebugMode` y se lee con `adb logcat | grep MEDICION`.
+Medido en emulador x86_64 (Pixel 9 Pro, API 37) el 20/11/2026. Estas cifras **no sirven para
+declarar requisitos no funcionales**: para eso hay que medir en un dispositivo ARM real. La
+instrumentación se lee con `adb logcat | grep MEDICION` en compilaciones debug y profile.
 
 ## Arquitectura
 
@@ -56,22 +66,24 @@ Hexagonal, igual que el escritorio:
 
 ```
 lib/
-  dominio/          entidades, objetos de valor y el puerto de consulta
+  dominio/          entidades, objetos de valor y los puertos (consulta, modo, preferencias)
   aplicacion/       depurador, evaluador de confianza, compositor, detector de idioma
-  infraestructura/  contenedor y adaptadores de salida
-  presentacion/     pantalla y componentes
+  infraestructura/  contenedor y adaptadores: AsistenteNube, AsistenteLocal, AsistenteConmutado,
+                    HistorialSqlite, índice portable y tabla de traducción
+  presentacion/     pantalla principal, vistas (consultar, fuentes, predicción ML) y componentes
 ```
 
-El paso de depender del servicio de escritorio a resolver en el dispositivo fue **cambiar
-una línea del contenedor**: `AsistenteHttp()` por `AsistenteLocal.cargar()`. Ni el dominio,
-ni los casos de uso, ni una sola pantalla se tocaron, y las pruebas de interfaz siguieron
-pasando sin modificarlas. El adaptador HTTP sigue en el proyecto y sigue siendo válido.
+La pantalla solo conoce `AsistentePort`. Lo cumplen tres adaptadores y el contenedor inyecta
+`AsistenteConmutado`, que compone la nube y el corpus local. Así se pasó de una app solo sin
+conexión a una de dos modos sin tocar el dominio ni la lógica del modo sin conexión.
 
 ## Ejecutar
 
 ```bash
 flutter pub get
 flutter run -d <dispositivo>
+# Otra API (p. ej. el backend local desde el emulador):
+flutter run --dart-define=API_URL=http://10.0.2.2:8000
 ```
 
 Para compilar el paquete de instalación:
@@ -83,8 +95,12 @@ flutter build apk --release --split-per-abi
 ## Pruebas
 
 ```bash
-flutter test
+flutter test                                                        # 45 pruebas, sin red
+flutter test integration_test/arnes_dispositivo_test.dart -d <id>   # 248 consultas en el dispositivo
 ```
+
+Las pruebas de interfaz y de adaptadores usan un doble de la API, así que no necesitan la nube.
+`test/seguridad_test.dart` falla si alguien añade un token o una escritura contra la nube.
 
 Incluye una prueba de paridad que compara el motor de puntuación del dispositivo con el de
 scikit-learn sobre quince consultas escogidas por lo que ponen a prueba: acentos y ñ,
@@ -96,11 +112,11 @@ proponga formas no documentadas.
 
 ## Actualizar el índice
 
-Los archivos de `assets/indice/` se generan desde el repositorio del escritorio:
+Los archivos de `assets/indice/` se generan desde el backend del proyecto:
 
 ```bash
-python scripts/exportar_indice_movil.py
-python scripts/validar_indice_movil.py
+python backend/scripts/exportar_indice_movil.py <carpeta>
+python backend/scripts/validar_indice_movil.py
 ```
 
 y se copian a `assets/indice/`. El umbral de abstención viaja en `manifiesto.json` junto
